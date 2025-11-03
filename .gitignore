@@ -1,0 +1,21 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Local environment files
+.env
+.env.local
+
+# Vite and editor cache
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+
+# TypeScript build info
+*.tsbuildinfo
+
+# VSCode specific (optional)
+.vscode/
