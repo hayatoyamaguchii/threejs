@@ -40,50 +40,40 @@ let intersect: THREE.Intersection | null = null;
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-function getIntersects(event: MouseEvent, object: THREE.Object3D) {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+// Unified Input Handling
+function handleInputStart(clientX: number, clientY: number) {
+    mouse.x = (clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
-    return raycaster.intersectObjects(object.children, true);
-}
+    const intersects = raycaster.intersectObjects(rubiksCube.children, true);
 
-window.addEventListener('mousedown', (event) => {
-    const intersects = getIntersects(event, rubiksCube);
     if (intersects.length > 0) {
         controls.enabled = false;
         isDragging = true;
-        startMouse.set(event.clientX, event.clientY);
+        startMouse.set(clientX, clientY);
         intersect = intersects[0];
     }
-});
+}
 
-window.addEventListener('mouseup', (event) => {
+function handleInputMove(clientX: number, clientY: number) {
+    // Optional: Add visual feedback or tracking here if needed
+}
+
+function handleInputEnd(clientX: number, clientY: number) {
     if (isDragging && intersect) {
-        const endMouse = new THREE.Vector2(event.clientX, event.clientY);
+        const endMouse = new THREE.Vector2(clientX, clientY);
         const delta = endMouse.sub(startMouse);
 
         if (delta.length() > 10) { // Minimum drag distance
             const normal = intersect.face!.normal.clone();
-            // Transform normal to world space (since cubies are rotated)
             normal.transformDirection(intersect.object.matrixWorld).round();
 
-            // Determine drag direction
             const absDeltaX = Math.abs(delta.x);
             const absDeltaY = Math.abs(delta.y);
-
-            // Simplified logic: map 2D drag to 3D rotation based on face normal
-            // This is a heuristic and might need refinement for perfect feel
 
             let axis: 'x' | 'y' | 'z' = 'x';
             let direction = 1;
 
-            // Logic to determine axis and direction based on normal and drag
-            // This part can be tricky. Let's try a basic mapping.
-            // If normal is X (Right/Left), drag Y -> rotate Z, drag X -> rotate Y (screen space approx)
-            // If normal is Y (Top/Bottom), drag X -> rotate Z, drag Y -> rotate X
-            // If normal is Z (Front/Back), drag X -> rotate Y, drag Y -> rotate X
-
-            // We need to know which cubie was clicked to identify the layer index
             const cubie = intersect.object;
             const position = cubie.position.clone().round();
 
@@ -120,6 +110,46 @@ window.addEventListener('mouseup', (event) => {
     isDragging = false;
     controls.enabled = true;
     intersect = null;
+}
+
+// Mouse Events
+window.addEventListener('mousedown', (event) => {
+    handleInputStart(event.clientX, event.clientY);
+});
+
+window.addEventListener('mousemove', (event) => {
+    if (isDragging) {
+        handleInputMove(event.clientX, event.clientY);
+    }
+});
+
+window.addEventListener('mouseup', (event) => {
+    handleInputEnd(event.clientX, event.clientY);
+});
+
+// Touch Events
+window.addEventListener('touchstart', (event) => {
+    if (event.touches.length > 0) {
+        // Prevent default to stop scrolling/zooming while interacting with the cube
+        // event.preventDefault(); 
+        // Note: preventDefault might block other interactions, use carefully. 
+        // For a full screen game, it's usually desired.
+        handleInputStart(event.touches[0].clientX, event.touches[0].clientY);
+    }
+}, { passive: false });
+
+window.addEventListener('touchmove', (event) => {
+    if (isDragging && event.touches.length > 0) {
+        event.preventDefault(); // Prevent scrolling while dragging the cube
+        handleInputMove(event.touches[0].clientX, event.touches[0].clientY);
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', (event) => {
+    // touchend doesn't have touches, use changedTouches
+    if (event.changedTouches.length > 0) {
+        handleInputEnd(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+    }
 });
 
 function animate() {
